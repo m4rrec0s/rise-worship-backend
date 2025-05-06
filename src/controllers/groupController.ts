@@ -33,14 +33,7 @@ class GroupController {
 
   async getAllGroupsByFirebaseUid(req: Request, res: Response): Promise<void> {
     try {
-      const firebaseUid = req.user?.uid;
-
-      if (!firebaseUid) {
-        res.status(401).json({ message: "Usuário não autenticado" });
-        return;
-      }
-
-      const groups = await GroupService.getGroupsByFirebaseUid(firebaseUid);
+      const groups = await GroupService.getGroups();
       res.status(200).json(groups);
     } catch (error: any) {
       res.status(400).json({ message: error.message });
@@ -59,6 +52,17 @@ class GroupController {
       } else {
         res.status(400).json({ message: error.message });
       }
+    }
+  }
+
+  async getGroupMembers(req: Request, res: Response): Promise<void> {
+    try {
+      const { groupId } = req.params;
+
+      const members = await GroupService.getMembers(groupId);
+      res.status(200).json(members);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
     }
   }
 
@@ -208,7 +212,6 @@ class GroupController {
         return;
       }
 
-      // Verificar se o usuário requisitante tem permissão para remover (precisa ser admin)
       const requester = await prisma.user.findUnique({
         where: { firebaseUid },
         select: { id: true },
@@ -241,7 +244,6 @@ class GroupController {
         return;
       }
 
-      // Não permitir remover o criador do grupo
       const userToRemove = await prisma.user.findUnique({
         where: { id: userId },
       });
@@ -263,6 +265,53 @@ class GroupController {
 
       const result = await GroupService.removeUserFromGroup(groupId, userId);
       res.status(200).json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async updateGroup(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const { name, description } = req.body;
+      const image = req.file;
+      const firebaseUid = req.user?.uid;
+
+      if (!firebaseUid) {
+        res.status(401).json({ message: "Usuário não autenticado" });
+        return;
+      }
+
+      const group = await GroupService.updateGroup(id, {
+        name,
+        description,
+        image,
+      });
+
+      res.status(200).json({
+        message: "Grupo atualizado com sucesso",
+        group,
+      });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async deleteGroup(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+      const firebaseUid = req.user?.uid;
+
+      if (!firebaseUid) {
+        res.status(401).json({ message: "Usuário não autenticado" });
+        return;
+      }
+
+      const group = await GroupService.deleteGroup(id, firebaseUid);
+      res.status(200).json({
+        message: "Grupo excluído com sucesso",
+        group,
+      });
     } catch (error: any) {
       res.status(400).json({ message: error.message });
     }

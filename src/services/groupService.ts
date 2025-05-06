@@ -67,47 +67,9 @@ class GroupService {
     }
   }
 
-  async getGroupsByFirebaseUid(firebaseUid: string) {
+  async getGroups() {
     try {
-      const user = await prisma.user.findUnique({
-        where: { firebaseUid },
-        select: { id: true },
-      });
-
-      if (!user) {
-        throw new Error("Usuário não encontrado, faça login para continuar.");
-      }
-
-      // Buscar grupos onde o usuário tem permissões
-      const userGroups = await prisma.userGroup.findMany({
-        where: { userId: user.id },
-        include: {
-          group: {
-            include: {
-              creator: {
-                select: {
-                  id: true,
-                  name: true,
-                },
-              },
-            },
-          },
-        },
-      });
-
-      // Converter para o formato desejado
-      const groups = userGroups.map((ug) => ({
-        id: ug.group.id,
-        name: ug.group.name,
-        description: ug.group.description,
-        imageUrl: ug.group.imageUrl,
-        permission: ug.permission,
-        createdBy: ug.group.creator,
-      }));
-
-      // Buscar grupos onde o usuário é o criador (caso algum não esteja coberto nas permissões)
-      const createdGroups = await prisma.group.findMany({
-        where: { createdBy: user.id },
+      const groups = await prisma.group.findMany({
         include: {
           creator: {
             select: {
@@ -118,18 +80,8 @@ class GroupService {
         },
       });
 
-      const groupIds = new Set(groups.map((g) => g.id));
-      for (const group of createdGroups) {
-        if (!groupIds.has(group.id)) {
-          groups.push({
-            id: group.id,
-            name: group.name,
-            description: group.description,
-            imageUrl: group.imageUrl,
-            permission: "admin",
-            createdBy: group.creator,
-          });
-        }
+      if (!groups) {
+        throw new Error("Nenhum grupo encontrado");
       }
 
       return groups;
@@ -173,6 +125,32 @@ class GroupService {
       return group;
     } catch (error: any) {
       throw new Error(`Erro ao buscar grupo: ${error.message}`);
+    }
+  }
+
+  async getMembers(groupId: string) {
+    try {
+      const members = await prisma.userGroup.findMany({
+        where: { groupId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              imageUrl: true,
+            },
+          },
+        },
+      });
+
+      if (!members) {
+        throw new Error("Nenhum membro encontrado");
+      }
+
+      return members;
+    } catch (error: any) {
+      throw new Error(`Erro ao buscar membros do grupo: ${error.message}`);
     }
   }
 
@@ -315,6 +293,53 @@ class GroupService {
       return updatedGroup;
     } catch (error: any) {
       throw new Error(`Erro ao atualizar grupo: ${error.message}`);
+    }
+  }
+
+  async deleteGroup(groupId: string, firebaseUid: string) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { firebaseUid },
+        select: { id: true },
+      });
+
+      if (!user) {
+        throw new Error("Usuário não encontrado");
+      }
+
+      const userGroup = await prisma.userGroup.findFirst({
+        where: {
+          userId: user.id,
+          groupId,
+          permission: {
+            in: ["admin"],
+          },
+        },
+      });
+
+      if (!userGroup) {
+        throw new Error("Você não tem permissão para deletar este grupo");
+      }
+
+      const group = await prisma.group.findUnique({
+        where: { id: groupId },
+      });
+
+      if (!group) {
+        throw new Error("Grupo não encontrado");
+      }
+
+      await prisma.userGroup.deleteMany({
+        where: { groupId },
+      });
+
+      await prisma.group.delete({
+        where: { id: groupId },
+      });
+
+      return { message: "Grupo deletado com sucesso" };
+    } catch (error: any) {
+      throw new Error(`Erro ao deletar grupo: ${error.message}`);
     }
   }
 }
