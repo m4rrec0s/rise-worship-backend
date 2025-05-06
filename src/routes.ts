@@ -86,6 +86,22 @@ router.put(
 router.delete("/setlists/:id", verifyToken, SetListController.deleteSetList);
 
 router.post(
+  "/setlists/:setlistId/musics/:musicId",
+  verifyToken,
+  SetListController.addMusicToSetList
+);
+router.delete(
+  "/setlists/:setlistId/musics/:musicId",
+  verifyToken,
+  SetListController.removeMusicFromSetList
+);
+router.put(
+  "/setlists/:setlistId/musics/:musicId/order",
+  verifyToken,
+  SetListController.reorderSetListMusic
+);
+
+router.post(
   "/groups/:groupId/musics",
   verifyToken,
   upload.single("image"),

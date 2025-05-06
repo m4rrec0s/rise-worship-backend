@@ -32,8 +32,18 @@ class MusicController {
         return;
       }
 
-      const parsedLinks = links ? JSON.parse(links) : undefined;
-      const parsedTags = tags ? JSON.parse(tags) : undefined;
+      let parsedLinks;
+      let parsedTags;
+
+      // Verifica se links já é um objeto ou se precisa ser parseado
+      if (links) {
+        parsedLinks = typeof links === "string" ? JSON.parse(links) : links;
+      }
+
+      // Verifica se tags já é um array ou se precisa ser parseado
+      if (tags) {
+        parsedTags = typeof tags === "string" ? JSON.parse(tags) : tags;
+      }
 
       const music = await MusicService.createMusic(firebaseUid, groupId, {
         title,
@@ -113,8 +123,18 @@ class MusicController {
         return;
       }
 
-      const parsedLinks = links ? JSON.parse(links) : undefined;
-      const parsedTags = tags ? JSON.parse(tags) : undefined;
+      let parsedLinks;
+      let parsedTags;
+
+      // Verifica se links já é um objeto ou se precisa ser parseado
+      if (links) {
+        parsedLinks = typeof links === "string" ? JSON.parse(links) : links;
+      }
+
+      // Verifica se tags já é um array ou se precisa ser parseado
+      if (tags) {
+        parsedTags = typeof tags === "string" ? JSON.parse(tags) : tags;
+      }
 
       const music = await MusicService.updateMusic(id, firebaseUid, {
         title,

@@ -118,6 +118,92 @@ class SetListController {
       return;
     }
   }
+
+  async addMusicToSetList(req: Request, res: Response): Promise<void> {
+    try {
+      const { setlistId, musicId } = req.params;
+      const { order } = req.body;
+      const firebaseUid = req.user?.uid;
+
+      if (!firebaseUid) {
+        res.status(401).json({ error: "Usuário não autenticado" });
+        return;
+      }
+
+      if (!order && order !== 0) {
+        res.status(400).json({ error: "A ordem da música é obrigatória" });
+        return;
+      }
+
+      const result = await SetListService.addMusicToSetList(
+        setlistId,
+        musicId,
+        Number(order),
+        firebaseUid
+      );
+
+      res.status(200).json(result);
+      return;
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+      return;
+    }
+  }
+
+  async removeMusicFromSetList(req: Request, res: Response): Promise<void> {
+    try {
+      const { setlistId, musicId } = req.params;
+      const firebaseUid = req.user?.uid;
+
+      if (!firebaseUid) {
+        res.status(401).json({ error: "Usuário não autenticado" });
+        return;
+      }
+
+      const result = await SetListService.removeMusicFromSetList(
+        setlistId,
+        musicId,
+        firebaseUid
+      );
+
+      res.status(200).json(result);
+      return;
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+      return;
+    }
+  }
+
+  async reorderSetListMusic(req: Request, res: Response): Promise<void> {
+    try {
+      const { setlistId, musicId } = req.params;
+      const { newOrder } = req.body;
+      const firebaseUid = req.user?.uid;
+
+      if (!firebaseUid) {
+        res.status(401).json({ error: "Usuário não autenticado" });
+        return;
+      }
+
+      if (newOrder === undefined) {
+        res.status(400).json({ error: "A nova ordem da música é obrigatória" });
+        return;
+      }
+
+      const result = await SetListService.reorderSetListMusic(
+        setlistId,
+        musicId,
+        Number(newOrder),
+        firebaseUid
+      );
+
+      res.status(200).json(result);
+      return;
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+      return;
+    }
+  }
 }
 
 export default new SetListController();
