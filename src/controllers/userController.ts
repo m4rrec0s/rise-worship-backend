@@ -64,7 +64,6 @@ class UserController {
   async deleteUser(req: Request, res: Response): Promise<void> {
     const { id } = req.params;
 
-    // Verificar se o usuário é admin ou está excluindo seu próprio perfil
     const firebaseUid = req.user?.uid;
 
     if (!firebaseUid) {

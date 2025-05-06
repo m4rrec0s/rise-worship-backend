@@ -49,7 +49,7 @@ model UserGroup {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
   userId     String   @db.ObjectId
   groupId    String   @db.ObjectId
-  permission String // "visualizar" | "editar" | "admin"
+  permission String
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -65,7 +65,7 @@ model Music {
   tone       String
   cipher     String?
   author     String
-  links      Json // { youtube: String?, spotify: String?, outros: String[] }
+  links      Json
   thumbnail  String?
   categoryId String?  @db.ObjectId
   tags       String[]

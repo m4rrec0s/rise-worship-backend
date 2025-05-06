@@ -35,7 +35,6 @@ class SetListService {
         throw new Error("Usuário não encontrado.");
       }
 
-      // Verifica se o grupo existe
       const group = await prisma.group.findUnique({
         where: { id: groupId },
         select: { id: true },
@@ -45,7 +44,6 @@ class SetListService {
         throw new Error("Grupo não encontrado.");
       }
 
-      // Verifica se o usuário é membro do grupo
       const membership = await prisma.userGroup.findFirst({
         where: {
           userId: user.id,
@@ -130,7 +128,6 @@ class SetListService {
         throw new Error("Usuário não encontrado.");
       }
 
-      // Verifica se o usuário é membro do grupo
       const membership = await prisma.userGroup.findFirst({
         where: {
           userId: user.id,

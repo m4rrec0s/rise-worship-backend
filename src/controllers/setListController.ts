@@ -89,7 +89,7 @@ class SetListController {
         title,
         description,
         image,
-        groupId: "", // Não é necessário para atualizar, mas é exigido pela interface
+        groupId: "",
       });
 
       res.status(200).json(setList);

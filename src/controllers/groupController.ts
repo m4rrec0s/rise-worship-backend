@@ -127,7 +127,7 @@ class GroupController {
 
   async joinGroupByInvite(req: Request, res: Response): Promise<void> {
     try {
-      const { groupId } = req.params; // Este seria um código de convite ou o ID do grupo
+      const { groupId } = req.params;
       const firebaseUid = req.user?.uid;
 
       if (!firebaseUid) {
