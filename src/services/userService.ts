@@ -88,7 +88,6 @@ class UserService {
       if (email !== undefined) updateData.email = email;
       if (imageUrl !== undefined) updateData.imageUrl = imageUrl;
 
-      // Atualizar no Firebase se o email for alterado
       if (email && email !== user.email) {
         await auth.updateUser(firebaseUid, { email });
       }
@@ -114,15 +113,12 @@ class UserService {
         throw new Error("Usuário não encontrado");
       }
 
-      // Deletar o usuário do Firebase Auth
       await auth.deleteUser(user.firebaseUid);
 
-      // Remove o usuário de todos os grupos em que ele tem permissões
       await prisma.userGroup.deleteMany({
         where: { userId: id },
       });
 
-      // Finalmente, exclui o usuário do banco de dados
       const deletedUser = await prisma.user.delete({
         where: { id },
       });

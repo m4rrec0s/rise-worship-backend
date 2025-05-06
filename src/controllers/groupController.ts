@@ -1,0 +1,272 @@
+import { Request, Response } from "express";
+import GroupService from "../services/groupService";
+import prisma from "../prisma/database";
+
+class GroupController {
+  async createGroup(req: Request, res: Response): Promise<void> {
+    try {
+      const firebaseUid = req.user?.uid;
+
+      if (!firebaseUid) {
+        res.status(401).json({ message: "Usuário não autenticado" });
+        return;
+      }
+
+      const { name, description } = req.body;
+      const image = req.file;
+
+      const group = await GroupService.createGroup(firebaseUid, {
+        createdBy: firebaseUid,
+        name,
+        description,
+        image,
+      });
+
+      res.status(201).json({
+        message: "Grupo criado com sucesso",
+        group,
+      });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async getAllGroupsByFirebaseUid(req: Request, res: Response): Promise<void> {
+    try {
+      const firebaseUid = req.user?.uid;
+
+      if (!firebaseUid) {
+        res.status(401).json({ message: "Usuário não autenticado" });
+        return;
+      }
+
+      const groups = await GroupService.getGroupsByFirebaseUid(firebaseUid);
+      res.status(200).json(groups);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async getGroupById(req: Request, res: Response): Promise<void> {
+    try {
+      const { id } = req.params;
+
+      const group = await GroupService.getGroupById(id);
+      res.status(200).json(group);
+    } catch (error: any) {
+      if (error.message.includes("não encontrado")) {
+        res.status(404).json({ message: error.message });
+      } else {
+        res.status(400).json({ message: error.message });
+      }
+    }
+  }
+
+  async addUserToGroup(req: Request, res: Response): Promise<void> {
+    try {
+      const { groupId } = req.params;
+      const { userId, permission } = req.body;
+      const firebaseUid = req.user?.uid;
+
+      if (!firebaseUid) {
+        res.status(401).json({ message: "Usuário não autenticado" });
+        return;
+      }
+
+      const requester = await prisma.user.findUnique({
+        where: { firebaseUid },
+        select: { id: true },
+      });
+
+      if (!requester) {
+        res.status(404).json({ message: "Usuário não encontrado" });
+        return;
+      }
+
+      const isAdmin = await prisma.userGroup.findFirst({
+        where: {
+          userId: requester.id,
+          groupId,
+          permission: "admin",
+        },
+      });
+
+      const isCreator = await prisma.group.findFirst({
+        where: {
+          id: groupId,
+          createdBy: requester.id,
+        },
+      });
+
+      if (!isAdmin && !isCreator) {
+        res.status(403).json({
+          message:
+            "Você não tem permissão para adicionar usuários a este grupo",
+        });
+        return;
+      }
+
+      const result = await GroupService.addUserToGroup({
+        groupId,
+        userId,
+        permission,
+      });
+
+      res.status(200).json({
+        message: "Usuário adicionado ao grupo com sucesso",
+        result,
+      });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async joinGroupByInvite(req: Request, res: Response): Promise<void> {
+    try {
+      const { groupId } = req.params; // Este seria um código de convite ou o ID do grupo
+      const firebaseUid = req.user?.uid;
+
+      if (!firebaseUid) {
+        res.status(401).json({ message: "Usuário não autenticado" });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { firebaseUid },
+        select: { id: true },
+      });
+
+      if (!user) {
+        res.status(404).json({ message: "Usuário não encontrado" });
+        return;
+      }
+
+      const result = await GroupService.addUserToGroup({
+        groupId,
+        userId: user.id,
+        permission: "view",
+      });
+
+      res.status(200).json({
+        message: "Você entrou no grupo com sucesso",
+        result,
+      });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async leaveGroup(req: Request, res: Response): Promise<void> {
+    try {
+      const { groupId } = req.params;
+      const firebaseUid = req.user?.uid;
+
+      if (!firebaseUid) {
+        res.status(401).json({ message: "Usuário não autenticado" });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { firebaseUid },
+        select: { id: true },
+      });
+
+      if (!user) {
+        res.status(404).json({ message: "Usuário não encontrado" });
+        return;
+      }
+
+      const isCreator = await prisma.group.findFirst({
+        where: {
+          id: groupId,
+          createdBy: user.id,
+        },
+      });
+
+      if (isCreator) {
+        res.status(400).json({
+          message:
+            "O criador do grupo não pode sair. Você deve excluir o grupo ou transferir a propriedade para outro usuário.",
+        });
+        return;
+      }
+
+      const result = await GroupService.removeUserFromGroup(groupId, user.id);
+      res.status(200).json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  async removeUserFromGroup(req: Request, res: Response): Promise<void> {
+    try {
+      const { groupId, userId } = req.params;
+      const firebaseUid = req.user?.uid;
+
+      if (!firebaseUid) {
+        res.status(401).json({ message: "Usuário não autenticado" });
+        return;
+      }
+
+      // Verificar se o usuário requisitante tem permissão para remover (precisa ser admin)
+      const requester = await prisma.user.findUnique({
+        where: { firebaseUid },
+        select: { id: true },
+      });
+
+      if (!requester) {
+        res.status(404).json({ message: "Usuário não encontrado" });
+        return;
+      }
+
+      const isAdmin = await prisma.userGroup.findFirst({
+        where: {
+          userId: requester.id,
+          groupId,
+          permission: "admin",
+        },
+      });
+
+      const isCreator = await prisma.group.findFirst({
+        where: {
+          id: groupId,
+          createdBy: requester.id,
+        },
+      });
+
+      if (!isAdmin && !isCreator) {
+        res.status(403).json({
+          message: "Você não tem permissão para remover usuários deste grupo",
+        });
+        return;
+      }
+
+      // Não permitir remover o criador do grupo
+      const userToRemove = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      const groupInfo = await prisma.group.findUnique({
+        where: { id: groupId },
+      });
+
+      if (
+        groupInfo &&
+        userToRemove &&
+        groupInfo.createdBy === userToRemove.id
+      ) {
+        res
+          .status(403)
+          .json({ message: "Não é possível remover o criador do grupo" });
+        return;
+      }
+
+      const result = await GroupService.removeUserFromGroup(groupId, userId);
+      res.status(200).json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+}
+
+export default new GroupController();
