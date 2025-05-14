@@ -127,8 +127,17 @@ class SetListService {
             },
           },
           musics: {
-            include: {
-              music: true,
+            select: {
+              id: true,
+              order: true,
+              music: {
+                select: {
+                  id: true,
+                  title: true,
+                  author: true,
+                  tone: true,
+                },
+              },
             },
             orderBy: {
               order: "asc",

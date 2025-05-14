@@ -14,6 +14,12 @@ interface AddUserToGroupInput {
   permission: "view" | "edit" | "admin";
 }
 
+interface UpdatePermissionInput {
+  groupId: string;
+  userId: string;
+  permission: "view" | "edit" | "admin";
+}
+
 class GroupService {
   async createGroup(firebaseUid: string, groupData: CreateGroupInput) {
     try {
@@ -90,6 +96,34 @@ class GroupService {
     }
   }
 
+  async getGroupsByUserId(userId: string) {
+    try {
+      const groups = await prisma.userGroup.findMany({
+        where: { userId },
+        include: {
+          group: {
+            include: {
+              creator: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!groups) {
+        throw new Error("Nenhum grupo encontrado para este usuário");
+      }
+
+      return groups;
+    } catch (error: any) {
+      throw new Error(`Erro ao buscar grupos do usuário: ${error.message}`);
+    }
+  }
+
   async getGroupById(id: string) {
     try {
       const group = await prisma.group.findUnique({
@@ -151,6 +185,59 @@ class GroupService {
       return members;
     } catch (error: any) {
       throw new Error(`Erro ao buscar membros do grupo: ${error.message}`);
+    }
+  }
+  async getInfoGroup(groupId: string) {
+    try {
+      // Verificamos primeiro se o grupo existe
+      const groupExists = await prisma.group.findUnique({
+        where: { id: groupId },
+        select: { id: true },
+      });
+
+      if (!groupExists) {
+        throw new Error("Grupo não encontrado");
+      }
+
+      // Busca informações básicas do grupo
+      const group = await prisma.group.findUnique({
+        where: { id: groupId },
+        include: {
+          creator: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              imageUrl: true,
+            },
+          },
+        },
+      });
+
+      // Contagem de músicas no grupo
+      const musicsCount = await prisma.music.count({
+        where: { groupId },
+      }); // Contagem de setlists no grupo
+      const setlistsCount = await prisma.setlist.count({
+        where: { groupId },
+      });
+
+      // Contagem de membros no grupo
+      const membersCount = await prisma.userGroup.count({
+        where: { groupId },
+      });
+
+      // Retorna o grupo com as contagens como estatísticas
+      return {
+        ...group,
+        stats: {
+          musicsCount,
+          setlistsCount,
+          membersCount,
+        },
+      };
+    } catch (error: any) {
+      throw new Error(`Erro ao obter informações do grupo: ${error.message}`);
     }
   }
 
@@ -340,6 +427,75 @@ class GroupService {
       return { message: "Grupo deletado com sucesso" };
     } catch (error: any) {
       throw new Error(`Erro ao deletar grupo: ${error.message}`);
+    }
+  }
+
+  async updateUserPermission({
+    groupId,
+    userId,
+    permission,
+  }: UpdatePermissionInput) {
+    try {
+      const group = await prisma.group.findUnique({
+        where: { id: groupId },
+      });
+
+      if (!group) {
+        throw new Error("Grupo não encontrado");
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      if (!user) {
+        throw new Error("Usuário não encontrado");
+      }
+
+      const existingPermission = await prisma.userGroup.findFirst({
+        where: {
+          userId,
+          groupId,
+        },
+      });
+
+      if (!existingPermission) {
+        throw new Error("Usuário não pertence a este grupo");
+      }
+
+      // Não permitir mudança de permissão se o usuário for o criador do grupo
+      if (group.createdBy === userId) {
+        throw new Error(
+          "Não é possível alterar a permissão do criador do grupo"
+        );
+      }
+
+      const updatedPermission = await prisma.userGroup.update({
+        where: { id: existingPermission.id },
+        data: { permission },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              imageUrl: true,
+            },
+          },
+          group: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      });
+
+      return updatedPermission;
+    } catch (error: any) {
+      throw new Error(
+        `Erro ao atualizar permissão do usuário: ${error.message}`
+      );
     }
   }
 }

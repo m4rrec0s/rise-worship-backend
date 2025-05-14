@@ -2,6 +2,7 @@ import prisma from "../prisma/database";
 import { uploadToDrive } from "../config/googleDrive";
 import axios from "axios";
 import * as cheerio from "cheerio";
+import { Prisma } from "@prisma/client";
 
 interface MusicData {
   title: string;
@@ -95,8 +96,13 @@ class MusicService {
       throw new Error("Erro ao criar música: " + (error as Error).message);
     }
   }
-
-  async getAllMusicsByGroup(groupId: string, firebaseUid: string) {
+  async getAllMusicsByGroup(
+    groupId: string,
+    firebaseUid: string,
+    page?: number,
+    perPage?: number,
+    search?: string | null
+  ) {
     try {
       const user = await prisma.user.findUnique({
         where: { firebaseUid },
@@ -117,9 +123,41 @@ class MusicService {
       if (!userGroup) {
         throw new Error("Você não tem acesso a este grupo.");
       }
+      const skip = page && perPage ? (page - 1) * perPage : undefined;
+      const take = perPage;
+      const searchCondition =
+        search && search.trim() !== ""
+          ? {
+              OR: [
+                {
+                  title: {
+                    contains: search,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+                {
+                  author: {
+                    contains: search,
+                    mode: Prisma.QueryMode.insensitive,
+                  },
+                },
+                { tags: { has: search } },
+              ],
+            }
+          : undefined;
+
+      const totalItems = await prisma.music.count({
+        where: {
+          groupId,
+          ...searchCondition,
+        },
+      });
 
       const musics = await prisma.music.findMany({
-        where: { groupId },
+        where: {
+          groupId,
+          ...searchCondition,
+        },
         include: {
           creator: {
             select: {
@@ -134,9 +172,24 @@ class MusicService {
             },
           },
         },
+        orderBy: {
+          title: "asc",
+        },
+        skip,
+        take,
       });
 
-      return musics;
+      return {
+        data: musics,
+        pagination: {
+          totalItems,
+          currentPage: page || 1,
+          itemsPerPage: perPage || totalItems,
+          totalPages: perPage ? Math.ceil(totalItems / perPage) : 1,
+          hasNext: page && perPage ? page * perPage < totalItems : false,
+          hasPrevious: page ? page > 1 : false,
+        },
+      };
     } catch (error) {
       throw new Error(
         "Erro ao buscar músicas do grupo: " + (error as Error).message

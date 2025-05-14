@@ -63,10 +63,10 @@ class MusicController {
       res.status(400).json({ error: (error as Error).message });
     }
   }
-
   async getAllMusicsByGroup(req: Request, res: Response): Promise<void> {
     try {
       const { groupId } = req.params;
+      const { page, per_page, search } = req.query;
       const firebaseUid = req.user?.uid;
 
       if (!firebaseUid) {
@@ -74,11 +74,18 @@ class MusicController {
         return;
       }
 
-      const musics = await MusicService.getAllMusicsByGroup(
+      const pageNumber = page ? parseInt(page as string) : undefined;
+      const itemsPerPage = per_page ? parseInt(per_page as string) : undefined;
+      const searchTerm = search ? (search as string) : undefined;
+
+      const result = await MusicService.getAllMusicsByGroup(
         groupId,
-        firebaseUid
+        firebaseUid,
+        pageNumber,
+        itemsPerPage,
+        searchTerm
       );
-      res.status(200).json(musics);
+      res.status(200).json(result);
     } catch (error) {
       res.status(400).json({ error: (error as Error).message });
     }

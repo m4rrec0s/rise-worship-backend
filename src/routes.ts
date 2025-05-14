@@ -30,9 +30,15 @@ router.post(
   upload.single("image"),
   GroupController.createGroup
 );
-router.get("/groups", GroupController.getAllGroupsByFirebaseUid);
+router.get("/groups", GroupController.getAllGroups);
+router.get(
+  "/groups/user/:userId",
+  verifyToken,
+  GroupController.getGroupsByUserId
+);
 router.get("/groups/:id", GroupController.getGroupById);
 router.get("/groups/:groupId/members", GroupController.getGroupMembers);
+router.get("/groups/:groupId/info", GroupController.getInfoGroupById);
 
 router.post(
   "/groups/:groupId/members",
@@ -61,6 +67,11 @@ router.delete(
   "/groups/:groupId/members/:userId",
   verifyToken,
   GroupController.removeUserFromGroup
+);
+router.put(
+  "/groups/:groupId/members/:userId/permission",
+  verifyToken,
+  GroupController.updateUserPermission
 );
 router.delete("/groups/:groupId", verifyToken, GroupController.deleteGroup);
 
