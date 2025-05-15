@@ -39,6 +39,11 @@ router.get(
 router.get("/groups/:id", GroupController.getGroupById);
 router.get("/groups/:groupId/members", GroupController.getGroupMembers);
 router.get("/groups/:groupId/info", GroupController.getInfoGroupById);
+router.get(
+  "/groups/:groupId/check-membership",
+  verifyToken,
+  GroupController.checkUserInGroup
+);
 
 router.post(
   "/groups/:groupId/members",
@@ -59,15 +64,16 @@ router.put(
 );
 
 router.delete(
+  "/groups/:groupId/members",
+  verifyToken,
+  GroupController.removeFromGroup
+);
+router.delete(
   "/groups/:groupId/leave",
   verifyToken,
   GroupController.leaveGroup
 );
-router.delete(
-  "/groups/:groupId/members/:userId",
-  verifyToken,
-  GroupController.removeUserFromGroup
-);
+
 router.put(
   "/groups/:groupId/members/:userId/permission",
   verifyToken,

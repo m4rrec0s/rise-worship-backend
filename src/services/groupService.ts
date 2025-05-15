@@ -1,4 +1,5 @@
 import prisma from "../prisma/database";
+import { Prisma } from "@prisma/client";
 import { uploadToDrive } from "../config/googleDrive";
 
 interface CreateGroupInput {
@@ -73,9 +74,29 @@ class GroupService {
     }
   }
 
-  async getGroups() {
+  async getGroups(search?: string, page: number = 1, per_page: number = 10) {
     try {
+      const skip = (page - 1) * per_page;
+      const where = search
+        ? {
+            OR: [
+              {
+                name: { contains: search, mode: Prisma.QueryMode.insensitive },
+              },
+              {
+                description: {
+                  contains: search,
+                  mode: Prisma.QueryMode.insensitive,
+                },
+              },
+            ],
+          }
+        : {};
+
       const groups = await prisma.group.findMany({
+        where,
+        skip,
+        take: per_page,
         include: {
           creator: {
             select: {
@@ -84,13 +105,22 @@ class GroupService {
             },
           },
         },
+        orderBy: {
+          name: "asc",
+        },
       });
 
-      if (!groups) {
-        throw new Error("Nenhum grupo encontrado");
-      }
+      const totalGroups = await prisma.group.count({ where });
 
-      return groups;
+      return {
+        data: groups,
+        pagination: {
+          total: totalGroups,
+          page,
+          per_page,
+          total_pages: Math.ceil(totalGroups / per_page),
+        },
+      };
     } catch (error: any) {
       throw new Error(`Erro ao buscar grupos: ${error.message}`);
     }
@@ -319,8 +349,41 @@ class GroupService {
     }
   }
 
-  async removeUserFromGroup(groupId: string, userId: string) {
+  async removeUserFromGroup(
+    groupId: string,
+    userId: string,
+    firebaseUid: string
+  ) {
     try {
+      const loggedUser = await prisma.user.findUnique({
+        where: { firebaseUid },
+        select: { id: true },
+      });
+
+      if (!loggedUser) {
+        throw new Error("Usuário não encontrado");
+      }
+
+      const adminGroup = await prisma.userGroup.findFirst({
+        where: {
+          userId: loggedUser.id,
+          groupId,
+          permission: "admin",
+        },
+      });
+
+      if (!adminGroup) {
+        throw new Error(
+          "Apenas administradores podem remover usuários do grupo"
+        );
+      }
+
+      if (loggedUser.id === userId) {
+        throw new Error(
+          "Use a função de sair do grupo para remover a si mesmo"
+        );
+      }
+
       const userGroup = await prisma.userGroup.findFirst({
         where: {
           userId,
@@ -339,6 +402,55 @@ class GroupService {
       return { message: "Usuário removido do grupo com sucesso" };
     } catch (error: any) {
       throw new Error(`Erro ao remover usuário do grupo: ${error.message}`);
+    }
+  }
+
+  async leaveGroup(groupId: string, firebaseUid: string) {
+    try {
+      const user = await prisma.user.findUnique({
+        where: { firebaseUid },
+        select: { id: true },
+      });
+
+      if (!user) {
+        throw new Error("Usuário não encontrado");
+      }
+
+      const userGroup = await prisma.userGroup.findFirst({
+        where: {
+          userId: user.id,
+          groupId,
+        },
+      });
+
+      if (!userGroup) {
+        throw new Error("Você não pertence a este grupo");
+      }
+
+      if (userGroup.permission === "admin") {
+        const oldestMember = await prisma.userGroup.findFirst({
+          where: {
+            groupId,
+            userId: { not: user.id },
+          },
+          orderBy: { createdAt: "asc" },
+        });
+
+        if (oldestMember) {
+          await prisma.userGroup.update({
+            where: { id: oldestMember.id },
+            data: { permission: "admin" },
+          });
+        }
+      }
+
+      await prisma.userGroup.delete({
+        where: { id: userGroup.id },
+      });
+
+      return { message: "Você saiu do grupo com sucesso" };
+    } catch (error: any) {
+      throw new Error(`Erro ao sair do grupo: ${error.message}`);
     }
   }
 
@@ -495,6 +607,44 @@ class GroupService {
     } catch (error: any) {
       throw new Error(
         `Erro ao atualizar permissão do usuário: ${error.message}`
+      );
+    }
+  }
+
+  async isUserInGroup(firebaseUid: string, groupId: string): Promise<boolean> {
+    try {
+      // Primeiro buscamos o usuário pelo firebaseUid
+      const user = await prisma.user.findUnique({
+        where: { firebaseUid },
+        select: { id: true },
+      });
+
+      if (!user) {
+        return false;
+      }
+
+      // Verificamos se o grupo existe
+      const group = await prisma.group.findUnique({
+        where: { id: groupId },
+        select: { id: true },
+      });
+
+      if (!group) {
+        return false;
+      }
+
+      // Verificamos se o usuário está associado ao grupo
+      const userGroup = await prisma.userGroup.findFirst({
+        where: {
+          userId: user.id,
+          groupId,
+        },
+      });
+
+      return !!userGroup; // Retorna true se a relação existe, false caso contrário
+    } catch (error: any) {
+      throw new Error(
+        `Erro ao verificar participação no grupo: ${error.message}`
       );
     }
   }
