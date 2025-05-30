@@ -4,6 +4,15 @@ import axios from "axios";
 import * as cheerio from "cheerio";
 import { Prisma } from "@prisma/client";
 
+interface ChordSegment {
+  chord: string;
+  lineIndex: number;
+  charOffset: number;
+}
+interface Cipher {
+  key: string;
+  segments: ChordSegment[];
+}
 interface MusicData {
   title: string;
   author: string;
@@ -16,7 +25,7 @@ interface MusicData {
     others?: string[];
   };
   lyrics: string;
-  cipher?: string;
+  cipher?: Cipher;
   bpm?: number;
   thumbnail?: string;
   image?: Express.Multer.File;
@@ -83,7 +92,9 @@ class MusicService {
           tags: musicData.tags || [],
           links: links,
           lyrics: musicData.lyrics,
-          cipher: musicData.cipher,
+          cipher: musicData.cipher
+            ? JSON.parse(JSON.stringify(musicData.cipher))
+            : null,
           bpm: musicData.bpm,
           thumbnail: thumbnailUrl,
           createdBy: user.id,
@@ -326,7 +337,9 @@ class MusicService {
           tags: musicData.tags,
           links: links,
           lyrics: musicData.lyrics,
-          cipher: musicData.cipher,
+          cipher: musicData.cipher
+            ? JSON.parse(JSON.stringify(musicData.cipher))
+            : null,
           bpm: musicData.bpm,
           thumbnail: thumbnailUrl,
         },

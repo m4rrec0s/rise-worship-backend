@@ -244,20 +244,17 @@ class GroupService {
         },
       });
 
-      // Contagem de músicas no grupo
       const musicsCount = await prisma.music.count({
         where: { groupId },
-      }); // Contagem de setlists no grupo
+      });
       const setlistsCount = await prisma.setlist.count({
         where: { groupId },
       });
 
-      // Contagem de membros no grupo
       const membersCount = await prisma.userGroup.count({
         where: { groupId },
       });
 
-      // Retorna o grupo com as contagens como estatísticas
       return {
         ...group,
         stats: {
@@ -413,7 +410,7 @@ class GroupService {
       });
 
       if (!user) {
-        throw new Error("Usuário não encontrado");
+        throw new Error("User not found");
       }
 
       const userGroup = await prisma.userGroup.findFirst({
@@ -424,7 +421,7 @@ class GroupService {
       });
 
       if (!userGroup) {
-        throw new Error("Você não pertence a este grupo");
+        throw new Error("You do not belong to this group");
       }
 
       if (userGroup.permission === "admin") {
@@ -435,6 +432,18 @@ class GroupService {
           },
           orderBy: { createdAt: "asc" },
         });
+
+        if (!oldestMember) {
+          await prisma.userGroup.delete({
+            where: { id: userGroup.id },
+          });
+          await prisma.group.delete({
+            where: { id: groupId },
+          });
+          return {
+            message: "Group deleted successfully as you were the last member",
+          };
+        }
 
         if (oldestMember) {
           await prisma.userGroup.update({
@@ -448,9 +457,9 @@ class GroupService {
         where: { id: userGroup.id },
       });
 
-      return { message: "Você saiu do grupo com sucesso" };
+      return { message: "You have left the group successfully" };
     } catch (error: any) {
-      throw new Error(`Erro ao sair do grupo: ${error.message}`);
+      throw new Error(`Error leaving group: ${error.message}`);
     }
   }
 
@@ -575,10 +584,13 @@ class GroupService {
         throw new Error("Usuário não pertence a este grupo");
       }
 
-      // Não permitir mudança de permissão se o usuário for o criador do grupo
-      if (group.createdBy === userId) {
+      if (
+        group.createdBy &&
+        group.createdBy === userId &&
+        existingPermission.permission === "admin"
+      ) {
         throw new Error(
-          "Não é possível alterar a permissão do criador do grupo"
+          "Não é possível alterar a permissão do criador do grupo enquanto ele for admin"
         );
       }
 
@@ -613,7 +625,6 @@ class GroupService {
 
   async isUserInGroup(firebaseUid: string, groupId: string): Promise<boolean> {
     try {
-      // Primeiro buscamos o usuário pelo firebaseUid
       const user = await prisma.user.findUnique({
         where: { firebaseUid },
         select: { id: true },
@@ -623,7 +634,6 @@ class GroupService {
         return false;
       }
 
-      // Verificamos se o grupo existe
       const group = await prisma.group.findUnique({
         where: { id: groupId },
         select: { id: true },
@@ -633,7 +643,6 @@ class GroupService {
         return false;
       }
 
-      // Verificamos se o usuário está associado ao grupo
       const userGroup = await prisma.userGroup.findFirst({
         where: {
           userId: user.id,
@@ -641,7 +650,7 @@ class GroupService {
         },
       });
 
-      return !!userGroup; // Retorna true se a relação existe, false caso contrário
+      return !!userGroup;
     } catch (error: any) {
       throw new Error(
         `Erro ao verificar participação no grupo: ${error.message}`

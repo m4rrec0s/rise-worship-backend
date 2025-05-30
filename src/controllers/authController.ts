@@ -51,16 +51,14 @@ class AuthController {
       res.status(400).json({ message: "E-mail e senha são obrigatórios" });
       return;
     }
-
     try {
-      const { idToken, firebaseUid, user } = await AuthService.login(
-        email,
-        password
-      );
+      const { idToken, firebaseUid, user, sessionToken } =
+        await AuthService.login(email, password);
       res.status(200).json({
         firebaseUid,
         idToken,
         user,
+        sessionToken,
       });
     } catch (error: any) {
       res.status(401).json({ message: error.message });
@@ -94,6 +92,7 @@ class AuthController {
         idToken: result.idToken,
         firebaseUid: result.firebaseUid,
         user: result.user,
+        sessionToken: result.sessionToken,
       });
       return;
     } catch (error: any) {
@@ -129,6 +128,87 @@ class AuthController {
       });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  }
+
+  // Novo endpoint para login com token de sessão
+  async loginWithSession(req: Request, res: Response): Promise<void> {
+    const { sessionToken } = req.body;
+
+    if (!sessionToken) {
+      res.status(400).json({ message: "Token de sessão é obrigatório" });
+      return;
+    }
+
+    try {
+      const result = await AuthService.loginWithSessionToken(sessionToken);
+      res.status(200).json({
+        message: "Login com token de sessão bem-sucedido",
+        firebaseUid: result.firebaseUid,
+        user: result.user,
+        sessionToken: result.sessionToken,
+      });
+    } catch (error: any) {
+      res.status(401).json({ message: error.message });
+    }
+  }
+
+  // Endpoint para criar token estendido
+  async createExtendedToken(req: Request, res: Response): Promise<void> {
+    const { durationInDays = 30 } = req.body;
+    const firebaseUid = req.user?.uid;
+
+    if (!firebaseUid) {
+      res.status(401).json({ message: "Usuário não autenticado" });
+      return;
+    }
+
+    try {
+      const result = await AuthService.createExtendedFirebaseToken(
+        firebaseUid,
+        durationInDays
+      );
+      res.status(200).json({
+        message: `Token estendido criado com duração de ${durationInDays} dias`,
+        customToken: result.customToken,
+        sessionToken: result.sessionToken,
+      });
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // Endpoint para logout (remove token de sessão)
+  async logout(req: Request, res: Response): Promise<void> {
+    const { sessionToken } = req.body;
+
+    if (!sessionToken) {
+      res.status(400).json({ message: "Token de sessão é obrigatório" });
+      return;
+    }
+
+    try {
+      const result = await AuthService.logout(sessionToken);
+      res.status(200).json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  }
+
+  // Endpoint para logout de todas as sessões
+  async logoutAllSessions(req: Request, res: Response): Promise<void> {
+    const firebaseUid = req.user?.uid;
+
+    if (!firebaseUid) {
+      res.status(401).json({ message: "Usuário não autenticado" });
+      return;
+    }
+
+    try {
+      const result = await AuthService.logoutAllSessions(firebaseUid);
+      res.status(200).json(result);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
     }
   }
 }

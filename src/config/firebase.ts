@@ -33,3 +33,12 @@ if (!admin.apps.length) {
 }
 
 export const auth = admin.auth();
+
+export const createCustomToken = async (uid: string, customClaims?: object) => {
+  try {
+    const customToken = await auth.createCustomToken(uid, customClaims);
+    return customToken;
+  } catch (error) {
+    throw new Error(`Erro ao criar token customizado: ${error}`);
+  }
+};

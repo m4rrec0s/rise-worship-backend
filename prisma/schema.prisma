@@ -27,6 +27,18 @@ model User {
   musics        Music[]
   createdGroups Group[]     @relation("GroupCreator")
   setlist       Setlist[]
+  sessions      Session[]
+}
+
+model Session {
+  id           String    @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String    @unique // Token único para a sessão
+  userId       String    @db.ObjectId
+  firebaseUid  String
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
 }
 
 model Group {
@@ -63,7 +75,7 @@ model Music {
   title      String
   lyrics     String
   tone       String
-  cipher     String?
+  cipher     Json?
   author     String
   links      Json
   thumbnail  String?

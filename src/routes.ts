@@ -4,7 +4,7 @@ import UserController from "./controllers/userController";
 import GroupController from "./controllers/groupController";
 import SetListController from "./controllers/setListController";
 import MusicController from "./controllers/musicController";
-import { verifyToken } from "./middleware/authMiddleware";
+import { verifyToken, verifySessionToken } from "./middleware/authMiddleware";
 import { upload } from "./config/multer";
 
 const router = Router();
@@ -13,6 +13,16 @@ router.post("/auth/register", AuthController.register);
 router.post("/auth/login", AuthController.login);
 router.post("/auth/google-login", AuthController.googleLogin);
 router.get("/auth/me", verifyToken, AuthController.getMe);
+
+// Novos endpoints para tokens de sessão
+router.post("/auth/session-login", AuthController.loginWithSession);
+router.post(
+  "/auth/extended-token",
+  verifyToken,
+  AuthController.createExtendedToken
+);
+router.post("/auth/logout", AuthController.logout);
+router.post("/auth/logout-all", verifyToken, AuthController.logoutAllSessions);
 
 router.put(
   "/user/profile",

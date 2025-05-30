@@ -288,7 +288,6 @@ class GroupController {
         return;
       }
 
-      // Verificar se a permissão solicitada é válida
       if (!["view", "edit"].includes(permission)) {
         res.status(400).json({
           message:
@@ -307,7 +306,6 @@ class GroupController {
         return;
       }
 
-      // Verificar se o solicitante tem permissão de admin no grupo
       const isAdmin = await prisma.userGroup.findFirst({
         where: {
           userId: requester.id,
