@@ -152,7 +152,7 @@ class GroupController {
 
   async joinGroupByInvite(req: Request, res: Response): Promise<void> {
     try {
-      const { groupId } = req.params;
+      const { groupId, permission } = req.params;
       const firebaseUid = req.user?.uid;
 
       if (!firebaseUid) {
@@ -170,10 +170,14 @@ class GroupController {
         return;
       }
 
+      const validPermissions = ["view", "edit", "admin"] as const;
+      const userPermission = validPermissions.includes(permission as any)
+        ? (permission as "view" | "edit" | "admin")
+        : "view";
       const result = await GroupService.addUserToGroup({
         groupId,
         userId: user.id,
-        permission: "view",
+        permission: userPermission,
       });
 
       res.status(200).json({
@@ -256,10 +260,9 @@ class GroupController {
       res.status(400).json({ message: error.message });
     }
   }
-
   async deleteGroup(req: Request, res: Response): Promise<void> {
     try {
-      const { id } = req.params;
+      const { groupId } = req.params;
       const firebaseUid = req.user?.uid;
 
       if (!firebaseUid) {
@@ -267,7 +270,7 @@ class GroupController {
         return;
       }
 
-      const group = await GroupService.deleteGroup(id, firebaseUid);
+      const group = await GroupService.deleteGroup(groupId, firebaseUid);
       res.status(200).json({
         message: "Grupo excluído com sucesso",
         group,

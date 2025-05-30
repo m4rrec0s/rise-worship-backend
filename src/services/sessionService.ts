@@ -11,11 +11,9 @@ interface SessionData {
 }
 
 class SessionService {
-  // Criar um token de sessão que não expira
   async createSessionToken(firebaseUid: string): Promise<string> {
     const sessionToken = crypto.randomBytes(64).toString("hex");
 
-    // Buscar o usuário
     const user = await prisma.user.findUnique({
       where: { firebaseUid },
     });
@@ -24,18 +22,16 @@ class SessionService {
       throw new Error("Usuário não encontrado");
     }
 
-    // Remover sessões antigas do usuário (opcional - manter apenas uma sessão ativa)
     await prisma.session.deleteMany({
       where: { firebaseUid },
     });
 
-    // Criar nova sessão
     await prisma.session.create({
       data: {
         sessionToken,
         userId: user.id,
         firebaseUid,
-        expiresAt: null, // Session token - não expira
+        expiresAt: null,
         createdAt: new Date(),
       },
     });
