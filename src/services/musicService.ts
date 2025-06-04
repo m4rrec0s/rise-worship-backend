@@ -428,7 +428,6 @@ class MusicService {
         throw new Error("Chaves de API para busca não configuradas.");
       }
 
-      console.log(`Buscando letras para: ${searchTerm}`);
       const query = `${searchTerm} letra site:letras.mus.br`;
       const url = `https://www.googleapis.com/customsearch/v1?key=${googleApiKey}&cx=${searchEngineId}&q=${encodeURIComponent(
         query
@@ -438,7 +437,6 @@ class MusicService {
         const response = await axios.get(url);
 
         if (!response.data.items || response.data.items.length === 0) {
-          console.log("Nenhum resultado encontrado");
           return [];
         }
 
@@ -535,8 +533,6 @@ class MusicService {
       let author = "";
 
       if (url.includes("letras.mus.br")) {
-        console.log("Tentando extrair letra de:", url);
-
         title =
           $("h1.head-name").text().trim() ||
           $("h1.textStyle-primary").text().trim();
@@ -564,9 +560,6 @@ class MusicService {
         if (!author) {
           author = $(".title-content h2 a").text().trim();
         }
-
-        console.log("Título extraído:", title);
-        console.log("Autor extraído:", author);
 
         if (url.includes("/traduccion.html")) {
           const originalLyrics = $(".letra-original").html() || "";
@@ -603,7 +596,6 @@ class MusicService {
           for (const selector of selectors) {
             lyricsHtml = $(selector).html() || "";
             if (lyricsHtml) {
-              console.log(`Letra encontrada usando o seletor: ${selector}`);
               break;
             }
           }
@@ -620,10 +612,6 @@ class MusicService {
                   htmlContent.split("<p>").length > 3)
               ) {
                 if (!lyricsHtml) {
-                  console.log(
-                    "Letra encontrada usando método genérico em div:",
-                    $(el).attr("class")
-                  );
                   lyricsHtml = htmlContent;
                 }
               }

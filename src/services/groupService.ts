@@ -317,11 +317,17 @@ class GroupService {
         return updatedPermission;
       }
 
+      const membersCount = await prisma.userGroup.count({
+        where: { groupId },
+      });
+
+      const finalPermission = membersCount === 0 ? "admin" : permission;
+
       const userGroup = await prisma.userGroup.create({
         data: {
           userId,
           groupId,
-          permission,
+          permission: finalPermission,
         },
         include: {
           user: {
