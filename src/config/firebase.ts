@@ -12,13 +12,13 @@ try {
   if (fs.existsSync(serviceAccountPath)) {
     serviceAccount = require(serviceAccountPath);
   } else {
-    if (!process.env.FIREBASE_PROJECT_ID) {
+    if (!process.env.GOOGLE_PROJECT_ID) {
       throw new Error("Credenciais do Firebase não encontradas");
     }
     serviceAccount = {
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      projectId: process.env.GOOGLE_PROJECT_ID,
+      privateKey: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      clientEmail: process.env.GOOGLE_CLIENT_EMAIL,
     };
   }
 } catch (error) {
