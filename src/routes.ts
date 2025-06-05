@@ -31,6 +31,7 @@ router.put(
   UserController.updateUser
 );
 router.get("/users", UserController.getAllUsers);
+router.get("/users/search", UserController.getUsersByEmail);
 router.get("/user/:id", UserController.getUserById);
 router.delete("/user/:id", verifyToken, UserController.deleteUser);
 

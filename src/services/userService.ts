@@ -128,6 +128,32 @@ class UserService {
       throw new Error(`Erro ao excluir usuário: ${error.message}`);
     }
   }
+
+  async getUsersByEmail(emailQuery: string) {
+    try {
+      const users = await prisma.user.findMany({
+        where: {
+          email: {
+            contains: emailQuery,
+            mode: "insensitive",
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          imageUrl: true,
+        },
+        orderBy: {
+          email: "asc",
+        },
+      });
+
+      return users;
+    } catch (error: any) {
+      throw new Error(`Erro ao buscar usuários por email: ${error.message}`);
+    }
+  }
 }
 
 export default new UserService();

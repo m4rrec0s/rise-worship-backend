@@ -82,6 +82,22 @@ class UserController {
       }
     }
   }
+
+  async getUsersByEmail(req: Request, res: Response): Promise<void> {
+    const { email } = req.query;
+
+    if (!email || typeof email !== "string") {
+      res.status(400).json({ message: "Parâmetro 'email' é obrigatório" });
+      return;
+    }
+
+    try {
+      const users = await UserService.getUsersByEmail(email);
+      res.status(200).json(users);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  }
 }
 
 export default new UserController();
