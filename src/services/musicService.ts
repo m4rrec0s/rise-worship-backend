@@ -375,7 +375,6 @@ class MusicService {
         throw new Error("Música não encontrada.");
       }
 
-      const isCreator = music.createdBy === user.id;
       const userGroup = await prisma.userGroup.findFirst({
         where: {
           userId: user.id,
@@ -384,7 +383,7 @@ class MusicService {
         },
       });
 
-      if (!isCreator && !userGroup) {
+      if (!userGroup) {
         throw new Error("Você não tem permissão para deletar esta música.");
       }
 
