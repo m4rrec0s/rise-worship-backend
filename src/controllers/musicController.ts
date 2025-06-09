@@ -178,6 +178,48 @@ class MusicController {
       res.status(400).json({ error: (error as Error).message });
     }
   }
+  async verifyMusicExists(req: Request, res: Response): Promise<void> {
+    try {
+      const { title, author, groupId } = req.query;
+      const firebaseUid = req.user?.uid;
+
+      if (!firebaseUid) {
+        res.status(401).json({ error: "Usuário não autenticado" });
+        return;
+      }
+
+      if (
+        !title ||
+        !author ||
+        typeof title !== "string" ||
+        typeof author !== "string"
+      ) {
+        res.status(400).json({
+          error:
+            "Dados incompletos. Os campos título e autor são obrigatórios.",
+        });
+        return;
+      }
+
+      if (!groupId || typeof groupId !== "string") {
+        res.status(400).json({ error: "ID do grupo não fornecido" });
+        return;
+      }
+
+      // Decodificar os parâmetros que vieram codificados
+      const decodedTitle = decodeURIComponent(title);
+      const decodedAuthor = decodeURIComponent(author);
+      const exists = await MusicService.verifyMusicExists(
+        decodedTitle,
+        decodedAuthor,
+        groupId
+      );
+
+      res.status(200).json({ exists });
+    } catch (error) {
+      res.status(400).json({ error: (error as Error).message });
+    }
+  }
 
   async searchLyrics(req: Request, res: Response): Promise<void> {
     try {

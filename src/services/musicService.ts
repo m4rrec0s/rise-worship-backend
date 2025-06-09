@@ -207,9 +207,18 @@ class MusicService {
       );
     }
   }
-
   async getMusicById(id: string, firebaseUid: string) {
     try {
+      // Validar se o ID tem o formato válido de ObjectID do MongoDB
+      if (
+        !id ||
+        typeof id !== "string" ||
+        id.length !== 24 ||
+        !/^[0-9a-fA-F]{24}$/.test(id)
+      ) {
+        throw new Error("ID de música inválido.");
+      }
+
       const user = await prisma.user.findUnique({
         where: { firebaseUid },
         select: { id: true },
@@ -398,6 +407,35 @@ class MusicService {
       return { message: "Música deletada com sucesso." };
     } catch (error) {
       throw new Error("Erro ao deletar música: " + (error as Error).message);
+    }
+  }
+
+  async verifyMusicExists(
+    title: string,
+    author: string,
+    groupId: string
+  ): Promise<boolean> {
+    try {
+      const music = await prisma.music.findFirst({
+        where: {
+          title: {
+            equals: title,
+            mode: Prisma.QueryMode.insensitive,
+          },
+          author: {
+            equals: author,
+            mode: Prisma.QueryMode.insensitive,
+          },
+          groupId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      return Boolean(music);
+    } catch (error) {
+      return false;
     }
   }
 

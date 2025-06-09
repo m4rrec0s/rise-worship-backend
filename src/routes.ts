@@ -140,6 +140,7 @@ router.get(
   verifyToken,
   MusicController.getAllMusicsByGroup
 );
+router.get("/musics/exists", verifyToken, MusicController.verifyMusicExists);
 router.get("/musics/:id", verifyToken, MusicController.getMusicById);
 router.put(
   "/musics/:id",
